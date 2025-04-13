@@ -1,0 +1,344 @@
+<html>
+  <head>
+    <title>brainfuck ide</title>
+    <style>
+      body {
+        background: black;
+        margin: 0;
+      }
+      #ide {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        padding: 1rem;
+      }
+      input, textarea, button {
+        background: navy;
+      }
+      * {
+        color: white;
+        box-sizing: border-box;
+        font-family: monospace;
+        margin: 0;
+        padding: 0;
+      }
+      fieldset {
+        padding: 1rem;
+      }
+      main {
+        display: flex;
+        flex-grow: 1;
+        gap: 1rem;
+      }
+      details label {
+        display: block;
+      }
+      details input {
+        width: 100%;
+      }
+      #toolbar {
+        width: 20rem;
+      }
+      #program {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      #program *:first-child {
+        flex-grow: 1;
+      }
+      textarea {
+        width: 100%;
+        height: 100%;
+        background: black;
+      }
+      #dataTable td {
+        padding: 0.25rem;
+        border: 1px solid grey;
+      }
+      #dataTable td.empty {
+        color: grey;
+      }
+      #dataTable td.active {
+        border: 1px solid green;
+      }
+      #breakpoints {
+        margin-top: 0.25rem;
+      }
+      #breakpoints button {
+        margin-right: 0.25rem;
+        background: red;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ide">
+    <h1>brainfuck ide</h1>
+    <main>
+      <form id="toolbar">
+        <fieldset>
+          <legend>toolbar</legend>
+          <details>
+            <summary>[compiler config]</summary>
+            <label>
+              number of cells:
+              <input name="f-cels" type="number" value="128" step=2 />
+            </label>
+          </details>
+
+          <details>
+            <summary>[view]</summary>
+            <label>
+              view table columns:
+              <input type="number" value="8" step=2 />
+            </label>
+          </details>
+
+          <details open>
+            <summary>execution</summary>
+
+            <button onClick="onRun(event)">run</button>
+            <button onClick="onStep(event)">step</button>
+            <button onClick="onReset(event)">reset</button>
+
+          </details>
+
+          <details open>
+            <summary>breakpoints</summary>
+
+            <button onclick="addBreakpoint(event)">add</button>
+
+            <div id="breakpoints"></div>
+          </details>
+        </fieldset>
+      </form>
+
+      <form id="program">
+        <fieldset>
+          <legend>code</legend>
+          <textarea id="code" name="code" oninput="onCodeChange(event)"></textarea>
+        </fieldset>
+        <fieldset>
+          <legend>input</legend>
+          <textarea id="input" name="input" oninput="oninputChange(event)"></textarea>
+        </fieldset>
+        <fieldset>
+          <legend>output</legend>
+          <textarea id="output" name="output"></textarea>
+        </fieldset>
+      </form>
+
+      <fieldset>
+        <legend>data</legend>
+        <table id="dataTable">
+          <tbody></tbody>
+        </table>
+      </fieldset>
+    </main>
+    </div>
+
+    <script>
+      let buffer
+      let data
+      let program
+      let breakpoints = new Set()
+
+      const $code = document.getElementById("code")
+      const dataTable = document.getElementById("dataTable")
+
+      const $table = {
+        body: dataTable.getElementsByTagName('tbody')[0],
+        tds: [],
+        activeTd: null,
+        makeRow() {
+          const row = document.createElement('tr');
+
+          this.body.appendChild(row);
+
+          return row;
+        },
+        formatCol(col, n) {
+          col.innerText = String(n).padStart(3, '0')
+          if (n) {
+            col.classList.remove('empty')
+          } else {
+            col.classList.add('empty')
+          }
+        },
+        setActive(i) {
+          this.activeTd && this.activeTd.classList.remove('active')
+
+          this.activeTd = this.dataTableTds[i]
+
+          this.activeTd.classList.add('active')
+        },
+        updateCol(i, data) {
+          this.formatCol(this.dataTableTds[i], data[i])
+        },
+        configDataTable(cells, cols, data) {
+          this.dataTableTds = []
+          this.body.innerHTML = ""
+
+          let row
+
+          for (let i = 0; i < cells; i++) {
+            if (i % cols === 0) {
+              row = this.makeRow()
+            }
+
+            const col = document.createElement('td')
+            const n = data[i] || 0
+            this.formatCol(col, n)
+            this.dataTableTds.push(col)
+            row.appendChild(col)
+          }
+        }
+      }
+
+      function makeProgram(code, data) {
+        $table.setActive(0)
+        return {
+          pc: 0,
+          dp: 0,
+          code: code,
+          showCodeLoc() {
+            $code.focus()
+            $code.setSelectionRange(this.pc, this.pc + 1)
+          },
+          incPc() {
+            this.pc++
+            this.showCodeLoc()
+            return this.pc
+          },
+          decPc() {
+            this.pc--
+            this.showCodeLoc()
+            return this.pc
+          },
+          step() {
+            if (!this.code[this.pc]) {
+              return
+            }
+            switch(this.code[this.pc]) {
+              case "+":
+                data[this.dp]++
+                $table.updateCol(this.dp, data)
+                break;
+              case "-":
+                data[this.dp]--
+                $table.updateCol(this.dp, data)
+                break;
+              case ">":
+                this.dp++
+                $table.setActive(this.dp)
+                break
+              case "<":
+                this.dp--
+                $table.setActive(this.dp)
+                break
+              case "[":
+                if (!data[this.dp]) {
+                  let level = 1
+
+                  while(level) {
+                    switch (this.code[this.incPc()]) {
+                      case "[":
+                        level++
+                        break
+                      case "]":
+                        level--
+                        break
+                    }
+                  }
+                }
+                break
+              case "]":
+                if (data[this.dp]) {
+                  let level = 1
+
+                  while(level) {
+                    switch (this.code[this.decPc()]) {
+                      case "[":
+                        level--
+                        break
+                      case "]":
+                        level++
+                        break
+                    }
+                  }
+                }
+                break
+            }
+            this.incPc()
+            return true
+          }
+        }
+      }
+
+      function init() {
+        buffer = new ArrayBuffer(document.querySelector('[name="f-cels"]').value)
+        view = new Uint8Array(buffer)
+
+        $table.configDataTable(view.length, 8, view)
+        program = makeProgram($code.value, view)
+      }
+
+      function onStep(event) {
+        event.preventDefault();
+        program.step()
+      }
+
+      function onRun(event) {
+        event.preventDefault();
+        let first = true;
+        while((!breakpoints.intersection(new Set([program.pc])).size || first) && program.step()) {
+          first = false;
+        }
+      }
+
+      function onCodeChange() {
+        program.code = $code.value
+      }
+
+      function onReset(event) {
+        event.preventDefault();
+        init()
+        program.showCodeLoc()
+      }
+
+      function renderBreakpoints() {
+        document.getElementById("breakpoints").innerHTML = ""
+
+        for (let loc of breakpoints) {
+          const btn = document.createElement('button')
+
+          btn.addEventListener('click', (event) => {
+            event.preventDefault();
+            $code.focus()
+            $code.setSelectionRange(loc, loc + 1)
+          })
+
+          btn.addEventListener('dblclick', (event) => {
+            breakpoints.delete(loc)
+            renderBreakpoints();
+          })
+
+          btn.innerText = String(loc).padStart(4, "0");
+
+          document.getElementById("breakpoints").appendChild(btn);
+        }
+      }
+
+      function addBreakpoint(event) {
+        event.preventDefault();
+        let loc = $code.selectionStart;
+        breakpoints.add(loc);
+
+        renderBreakpoints()
+      }
+
+      init()
+    </script>
+  </body>
+</html>
