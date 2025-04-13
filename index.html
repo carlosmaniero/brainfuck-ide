@@ -20,10 +20,29 @@
         flex-grow: 1;
       }
       #io fieldset textarea {
-        min-height: 5rem;
+        min-height: 6rem;
+      }
+      #io label {
+        margin: 0.5rem 0;
+        display: block;
+      }
+      #io .actions {
+        display: flex;
+        justify-content: space-between;
+      }
+      #io fieldset#input-actions textarea {
+        min-height: 100%;
+      }
+      #io #output-actions {
+        flex-grow: 2;
       }
       input, textarea, button {
         background: navy;
+        outline: none;
+        border: 1px solid white;
+      }
+      input:focus, textarea:focus, button:focus {
+        border: 1px solid magenta;
       }
       * {
         color: white;
@@ -31,6 +50,9 @@
         font-family: monospace;
         margin: 0;
         padding: 0;
+      }
+      .btn-sec {
+        background: grey;
       }
       fieldset {
         padding: 1rem;
@@ -67,8 +89,11 @@
       }
       textarea {
         width: 100%;
-        height: 100%;
         background: black;
+        padding: 0.5rem;
+      }
+      #code {
+        height: 100%;
       }
       #dataTable td {
         padding: 0.25rem;
@@ -141,13 +166,23 @@
           <textarea id="code" name="code" oninput="onCodeChange(event)"></textarea>
         </fieldset>
         <div id="io">
-          <fieldset>
+          <fieldset id="input-actions">
             <legend>input</legend>
             <textarea id="input" name="input" oninput="oninputChange(event)"></textarea>
           </fieldset>
-          <fieldset>
+          <fieldset id="output-actions">
             <legend>output</legend>
             <textarea id="output" name="output"></textarea>
+
+            <div class="actions">
+              <label>
+                <input type="checkbox" id="auto-clean" checked />
+                auto clean on run
+              </label>
+
+              <label>
+                <button class="btn-sec" onclick="onCleanOutput(event)">clean</button>
+              </label>
           </fieldset>
         </div>
       </form>
@@ -171,6 +206,7 @@
       const dataTable = document.getElementById("dataTable")
       const $output = document.getElementById("output")
       const $runFromBeginning = document.getElementById("from-beginning")
+      const $autoClean = document.getElementById("auto-clean")
 
       const $table = {
         body: dataTable.getElementsByTagName('tbody')[0],
@@ -323,6 +359,10 @@
           init()
         }
 
+        if ($autoClean.checked) {
+          cleanOutput()
+        }
+
         let first = true;
         while((!breakpoints.intersection(new Set([program.pc])).size || first) && program.step()) {
           first = false;
@@ -337,6 +377,15 @@
         event.preventDefault();
         init()
         program.showCodeLoc()
+      }
+
+      function cleanOutput() {
+        $output.value = ""
+      }
+
+      function onCleanOutput(event) {
+        event.preventDefault()
+        cleanOutput();
       }
 
       function renderBreakpoints() {
