@@ -36,6 +36,23 @@
       #io #output-actions {
         flex-grow: 2;
       }
+      #program-data {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+      }
+      #program-data input {
+        width: 100%;
+        background: purple;
+      }
+      #program-data input#dp {
+        background: green;
+      }
+      #section-data {
+        display: flex;
+        flex-direction: column;
+        width: 1px;
+      }
       input, textarea, button {
         background: navy;
         outline: none;
@@ -187,8 +204,14 @@
         </div>
       </form>
 
-      <fieldset>
+      <fieldset id="section-data">
         <legend>data</legend>
+
+        <div id="program-data">
+          <label>pc: <input id="pc" value="0" oninput="onUpdatePc(event)"></label>
+          <label>dp: <input id="dp" value="0" oninput="onUpdateDp(event)"></label>
+        </div>
+
         <table id="dataTable">
           <tbody></tbody>
         </table>
@@ -207,6 +230,8 @@
       const $output = document.getElementById("output")
       const $runFromBeginning = document.getElementById("from-beginning")
       const $autoClean = document.getElementById("auto-clean")
+      const $pc = document.getElementById("pc")
+      const $dp = document.getElementById("dp")
 
       const $table = {
         body: dataTable.getElementsByTagName('tbody')[0],
@@ -270,12 +295,26 @@
           incPc() {
             this.pc++
             this.showCodeLoc()
+            $pc.value = this.pc
             return this.pc
           },
           decPc() {
             this.pc--
             this.showCodeLoc()
+            $pc.value = this.pc
             return this.pc
+          },
+          incDp() {
+            this.dp++
+            $table.setActive(this.dp)
+            $dp.value = this.dp
+            return this.dp
+          },
+          decDp() {
+            this.dp--
+            $table.setActive(this.dp)
+            $dp.value = this.dp
+            return this.dp
           },
           step() {
             if (!this.code[this.pc]) {
@@ -291,11 +330,10 @@
                 $table.updateCol(this.dp, data)
                 break;
               case ">":
-                this.dp++
-                $table.setActive(this.dp)
+                this.incDp()
                 break
               case "<":
-                this.dp--
+                this.decDp()
                 $table.setActive(this.dp)
                 break
               case ".":
@@ -377,6 +415,8 @@
         event.preventDefault();
         init()
         program.showCodeLoc()
+        $pc.value = "0"
+        $dp.value = "0"
       }
 
       function cleanOutput() {
@@ -386,6 +426,24 @@
       function onCleanOutput(event) {
         event.preventDefault()
         cleanOutput();
+      }
+
+      function onUpdatePc(event) {
+        event.preventDefault()
+        const data = Number(event.target.value);
+
+        if (!isNaN(data)) {
+          program.pc = data;
+        }
+      }
+
+      function onUpdateDp(event) {
+        event.preventDefault()
+        const data = Number(event.target.value);
+
+        if (!isNaN(data)) {
+          program.dp = data;
+        }
       }
 
       function renderBreakpoints() {
