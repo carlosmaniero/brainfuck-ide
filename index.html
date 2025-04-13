@@ -12,6 +12,16 @@
         height: 100vh;
         padding: 1rem;
       }
+      #io {
+        display: flex;
+        gap: 1rem;
+      }
+      #io fieldset {
+        flex-grow: 1;
+      }
+      #io fieldset textarea {
+        min-height: 5rem;
+      }
       input, textarea, button {
         background: navy;
       }
@@ -119,14 +129,16 @@
           <legend>code</legend>
           <textarea id="code" name="code" oninput="onCodeChange(event)"></textarea>
         </fieldset>
-        <fieldset>
-          <legend>input</legend>
-          <textarea id="input" name="input" oninput="oninputChange(event)"></textarea>
-        </fieldset>
-        <fieldset>
-          <legend>output</legend>
-          <textarea id="output" name="output"></textarea>
-        </fieldset>
+        <div id="io">
+          <fieldset>
+            <legend>input</legend>
+            <textarea id="input" name="input" oninput="oninputChange(event)"></textarea>
+          </fieldset>
+          <fieldset>
+            <legend>output</legend>
+            <textarea id="output" name="output"></textarea>
+          </fieldset>
+        </div>
       </form>
 
       <fieldset>
@@ -146,6 +158,7 @@
 
       const $code = document.getElementById("code")
       const dataTable = document.getElementById("dataTable")
+      const $output = document.getElementById("output")
 
       const $table = {
         body: dataTable.getElementsByTagName('tbody')[0],
@@ -237,6 +250,8 @@
                 this.dp--
                 $table.setActive(this.dp)
                 break
+              case ".":
+                $output.value += String.fromCharCode(data[this.dp])
               case "[":
                 if (!data[this.dp]) {
                   let level = 1
