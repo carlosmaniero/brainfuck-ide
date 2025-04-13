@@ -40,11 +40,18 @@
         flex-grow: 1;
         gap: 1rem;
       }
+      details summary {
+        padding-bottom: 0.5rem;
+      }
       details label {
         display: block;
       }
-      details input {
+      details input:not([type=checkbox]) {
         width: 100%;
+      }
+      details button,
+      details input{
+        margin-bottom: 0.5rem;
       }
       #toolbar {
         width: 20rem;
@@ -112,6 +119,10 @@
             <button onClick="onStep(event)">step</button>
             <button onClick="onReset(event)">reset</button>
 
+            <label>
+              <input type="checkbox" id="from-beginning" checked />
+              run from beginning
+            </label>
           </details>
 
           <details open>
@@ -159,6 +170,7 @@
       const $code = document.getElementById("code")
       const dataTable = document.getElementById("dataTable")
       const $output = document.getElementById("output")
+      const $runFromBeginning = document.getElementById("from-beginning")
 
       const $table = {
         body: dataTable.getElementsByTagName('tbody')[0],
@@ -306,6 +318,11 @@
 
       function onRun(event) {
         event.preventDefault();
+
+        if ($runFromBeginning.checked) {
+          init()
+        }
+
         let first = true;
         while((!breakpoints.intersection(new Set([program.pc])).size || first) && program.step()) {
           first = false;
